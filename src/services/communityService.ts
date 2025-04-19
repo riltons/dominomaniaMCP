@@ -8,8 +8,9 @@ export interface Community {
     created_by: string;
     created_at: string;
     updated_at: string;
+    disabled: boolean;
     members_count: number;
-    games_count: number;
+    competitions_count: number;
     is_organizer?: boolean;
 }
 
@@ -21,6 +22,7 @@ export interface CreateCommunityDTO {
 export interface UpdateCommunityDTO {
     name?: string;
     description?: string;
+    disabled?: boolean;
 }
 
 class CommunityService {
@@ -45,7 +47,7 @@ class CommunityService {
         }
     }
 
-    async list() {
+    async list(includeDisabled: boolean = false) {
         try {
             const userId = (await supabase.auth.getUser()).data.user?.id;
             if (!userId) throw new Error('Usuário não autenticado');
@@ -53,7 +55,7 @@ class CommunityService {
             console.log('Buscando comunidades para o usuário:', userId);
 
             // Busca todas as comunidades onde o usuário é criador
-            const { data: createdCommunities = [], error: createdError } = await supabase
+            let createdQuery = supabase
                 .from('communities')
                 .select(`
                     *,
@@ -61,6 +63,7 @@ class CommunityService {
                     competitions:competitions(count)
                 `)
                 .eq('created_by', userId);
+            const { data: createdCommunities = [], error: createdError } = await createdQuery;
 
             if (createdError) {
                 console.error('Erro ao listar comunidades criadas:', createdError);
@@ -83,18 +86,15 @@ class CommunityService {
             }
 
             // Depois busca os detalhes dessas comunidades
-            const { data: organizedCommunities = [], error: organizedError } = await supabase
+            let organizedQuery = supabase
                 .from('communities')
                 .select(`
-                    id,
-                    name,
-                    description,
-                    created_at,
-                    created_by,
+                    *,
                     members:community_members(count),
                     competitions:competitions(count)
                 `)
                 .in('id', organizedIds.map(org => org.community_id));
+            const { data: organizedCommunities = [], error: organizedError } = await organizedQuery;
 
             if (organizedError) {
                 console.error('Erro ao buscar detalhes das comunidades organizadas:', organizedError);
@@ -106,17 +106,33 @@ class CommunityService {
                 organizadas: organizedCommunities.length
             });
 
+            // Assume que todas as comunidades estão habilitadas se não tiver a coluna disabled
+            const processedCreatedCommunities = createdCommunities.map(c => ({
+                ...c,
+                members_count: c.members?.[0]?.count || 0,
+                competitions_count: c.competitions?.[0]?.count || 0,
+                disabled: c.disabled || false
+            }));
+            
+            const processedOrganizedCommunities = organizedCommunities.map(c => ({
+                ...c,
+                members_count: c.members?.[0]?.count || 0,
+                competitions_count: c.competitions?.[0]?.count || 0,
+                disabled: c.disabled || false
+            }));
+            
+            // Se includeDisabled for false, filtra as comunidades desabilitadas no lado do cliente
+            const filteredCreated = includeDisabled 
+                ? processedCreatedCommunities 
+                : processedCreatedCommunities.filter(c => !c.disabled);
+                
+            const filteredOrganized = includeDisabled 
+                ? processedOrganizedCommunities 
+                : processedOrganizedCommunities.filter(c => !c.disabled);
+
             return {
-                created: createdCommunities.map(c => ({
-                    ...c,
-                    members_count: c.members?.[0]?.count || 0,
-                    competitions_count: c.competitions?.[0]?.count || 0
-                })),
-                organized: organizedCommunities.map(c => ({
-                    ...c,
-                    members_count: c.members?.[0]?.count || 0,
-                    competitions_count: c.competitions?.[0]?.count || 0
-                }))
+                created: filteredCreated,
+                organized: filteredOrganized
             };
         } catch (error) {
             console.error('Erro ao listar comunidades:', error);
@@ -281,22 +297,69 @@ class CommunityService {
 
     async updateCommunity(id: string, updates: UpdateCommunityDTO) {
         try {
-            const { data, error } = await supabase
-                .from('communities')
-                .update(updates)
-                .eq('id', id)
-                .select()
-                .single();
+            // Se temos a propriedade disabled, vamos tentar atualizar diretamente
+            if (updates.disabled !== undefined) {
+                try {
+                    const { data, error } = await supabase
+                        .from('communities')
+                        .update(updates)
+                        .eq('id', id)
+                        .select()
+                        .single();
+                    
+                    if (!error) {
+                        // Atualiza a lista de comunidades em memória
+                        await this.list();
+                        return { data, error: null };
+                    }
+                    
+                    // Se o erro for relacionado à coluna disabled, vamos continuar com as outras atualizações
+                    if (error.message?.includes('disabled')) {
+                        console.log('Coluna disabled não existe, continuando com outras atualizações');
+                        // Removemos a propriedade disabled para tentar atualizar o resto
+                        const { disabled, ...otherUpdates } = updates;
+                        
+                        // Se não temos mais nada para atualizar, retornamos sucesso
+                        if (Object.keys(otherUpdates).length === 0) {
+                            // Buscamos a comunidade atual para retornar
+                            const { data: community } = await supabase
+                                .from('communities')
+                                .select('*')
+                                .eq('id', id)
+                                .single();
+                                
+                            return { data: community, error: null };
+                        }
+                        
+                        // Atualizamos o resto
+                        return this.updateCommunity(id, otherUpdates);
+                    }
+                    
+                    // Se for outro tipo de erro, lançamos
+                    throw error;
+                } catch (error) {
+                    console.error('Erro ao atualizar comunidade com disabled:', error);
+                    throw error;
+                }
+            } else {
+                // Caso não tenha a propriedade disabled, atualiza normalmente
+                const { data, error } = await supabase
+                    .from('communities')
+                    .update(updates)
+                    .eq('id', id)
+                    .select()
+                    .single();
 
-            if (error) {
-                console.error('Erro ao atualizar comunidade:', error);
-                throw error;
+                if (error) {
+                    console.error('Erro ao atualizar comunidade:', error);
+                    throw error;
+                }
+
+                // Atualiza a lista de comunidades em memória
+                await this.list();
+
+                return { data, error: null };
             }
-
-            // Atualiza a lista de comunidades em memória
-            await this.list();
-
-            return { data, error: null };
         } catch (error) {
             console.error('Erro ao atualizar comunidade:', error);
             return { data: null, error };

@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Alert, Modal as RNModal, ActivityIndicator, Pressable, View, ScrollView, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Alert, Modal as RNModal, ActivityIndicator, Pressable, View, ScrollView, RefreshControl, Text, Switch } from 'react-native';
 import styled from 'styled-components/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Community, communityService } from '@/services/communityService';
@@ -121,12 +121,15 @@ export default function Comunidades() {
     const [organizedCommunities, setOrganizedCommunities] = useState<Community[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [showDisabled, setShowDisabled] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
+    const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
     const router = useRouter();
     const { theme, colors } = useTheme();
 
     const loadCommunities = useCallback(async () => {
         try {
-            const { created, organized } = await communityService.list();
+            const { created, organized } = await communityService.list(showDisabled);
             setCreatedCommunities(created || []);
             setOrganizedCommunities(organized || []);
         } catch (error) {
@@ -138,13 +141,17 @@ export default function Comunidades() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [showDisabled]);
 
     useFocusEffect(
         useCallback(() => {
             loadCommunities();
         }, [loadCommunities])
     );
+
+    useEffect(() => {
+        loadCommunities();
+    }, [showDisabled]);
 
     const handleRefresh = () => {
         setRefreshing(true);
@@ -155,6 +162,7 @@ export default function Comunidades() {
         <CommunityCard
             key={community.id}
             onPress={() => router.push(`/comunidade/${community.id}`)}
+            style={{ opacity: community.disabled ? 0.5 : 1 }} // itens desabilitados com opacidade reduzida
         >
             <CommunityHeader>
                 <CommunityInfo>
@@ -162,7 +170,19 @@ export default function Comunidades() {
                     {community.description && (
                         <CommunityDescription>{community.description}</CommunityDescription>
                     )}
+                    {community.disabled && (
+                        <Text style={{ color: colors.accent, fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>
+                            DESABILITADA
+                        </Text>
+                    )}
                 </CommunityInfo>
+                <Pressable 
+                    onPress={() => { setSelectedCommunity(community); setMenuVisible(true); }}
+                    style={{ padding: 10 }} // Aumenta a área de toque
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Aumenta ainda mais a área de toque
+                >
+                    <MaterialCommunityIcons name="dots-vertical" size={24} color={colors.textPrimary} />
+                </Pressable>
             </CommunityHeader>
             
             <CommunityStats>
@@ -190,11 +210,21 @@ export default function Comunidades() {
     }
 
     const hasNoCommunities = createdCommunities.length === 0 && organizedCommunities.length === 0;
+    // Verifica se existem comunidades desabilitadas
+    const hasDisabled = createdCommunities.some(c => c.disabled) || organizedCommunities.some(c => c.disabled);
 
     return (
         <Container>
             <Header title="Comunidades" />
-            
+            <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 20, marginBottom: 8 }}>
+                <Text style={{ color: colors.textPrimary, marginRight: 8 }}>Mostrar desabilitadas</Text>
+                <Switch
+                    value={showDisabled}
+                    onValueChange={setShowDisabled}
+                    trackColor={{ false: colors.textSecondary, true: colors.accent }}
+                    thumbColor={showDisabled ? colors.backgroundLight : colors.backgroundLight}
+                />
+            </View>
             <ScrollContent
                 refreshControl={
                     <RefreshControl
@@ -235,6 +265,80 @@ export default function Comunidades() {
             >
                 <MaterialCommunityIcons name="plus" size={24} color={colors.backgroundLight} />
             </FloatingButton>
+            <RNModal transparent visible={menuVisible} animationType="fade">
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <View style={{ backgroundColor: colors.backgroundLight, padding: 20, borderRadius: 8, width: '80%', maxWidth: 300 }}>
+                        {selectedCommunity && (
+                            <>
+                                <Pressable 
+                                    onPress={() => { setMenuVisible(false); router.push(`/comunidade/${selectedCommunity.id}/editar`); }}
+                                    style={{ paddingVertical: 12 }}
+                                >
+                                    <Text style={{ color: colors.textPrimary, fontSize: 16 }}>Editar</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={async () => {
+                                        setMenuVisible(false);
+                                        // Habilitar, desabilitar ou excluir comunidade
+                                        if (selectedCommunity?.disabled) {
+                                            // Habilitar comunidade
+                                            const { error } = await communityService.updateCommunity(selectedCommunity.id, { disabled: false });
+                                            if (error) {
+                                                Alert.alert('Erro', `Não foi possível habilitar: ${error.message}`);
+                                                return;
+                                            }
+                                            Alert.alert('Sucesso', 'Comunidade habilitada');
+                                            await loadCommunities();
+                                            return;
+                                        } else if (selectedCommunity?.competitions_count > 0) {
+                                            const { data, error } = await communityService.updateCommunity(selectedCommunity.id, { disabled: true });
+                                            if (error) {
+                                                if (error.message?.includes('disabled')) {
+                                                    Alert.alert(
+                                                        'Atenção',
+                                                        'A coluna "disabled" não existe no banco de dados. Execute a migração SQL para adicionar essa coluna.',
+                                                        [{ text: 'OK' }]
+                                                    );
+                                                } else {
+                                                    Alert.alert('Erro', `Não foi possível desabilitar: ${error.message}`);
+                                                }
+                                                return;
+                                            }
+                                            Alert.alert('Sucesso', 'Comunidade desabilitada');
+                                            await loadCommunities();
+                                            return;
+                                        } else {
+                                            const { error } = await communityService.deleteCommunity(selectedCommunity.id);
+                                            if (error) {
+                                                Alert.alert('Erro', 'Não foi possível excluir a comunidade');
+                                                return;
+                                            }
+                                            await loadCommunities();
+                                            return;
+                                        }
+                                    }}
+                                    style={{ paddingVertical: 12 }}
+                                >
+                                    <Text style={{ color: colors.textPrimary, fontSize: 16 }}>
+                                        {selectedCommunity?.disabled
+                                            ? 'Habilitar'
+                                            : selectedCommunity?.competitions_count > 0
+                                                ? 'Desabilitar'
+                                                : 'Excluir'
+                                        }
+                                    </Text>
+                                </Pressable>
+                            </>
+                        )}
+                        <Pressable 
+                            onPress={() => setMenuVisible(false)}
+                            style={{ paddingVertical: 12 }}
+                        >
+                            <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Cancelar</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </RNModal>
         </Container>
     );
 }

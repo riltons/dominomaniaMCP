@@ -596,7 +596,7 @@ const Dashboard: React.FC = () => {
                             </SeeAllButton>
                         </SectionHeader>
 
-                        {topPlayers.map((player, index) => {
+                        {topPlayers.slice(0, 6).map((player, index) => {
                             const position = calculatePosition(index, topPlayers);
                             return (
                                 <PlayerCard key={player.id} onPress={() => router.push(`/jogador/jogador/${player.id}/jogos`)}>
