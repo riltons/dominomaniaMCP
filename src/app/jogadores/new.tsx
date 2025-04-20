@@ -1,22 +1,84 @@
-import React, { useState } from 'react';
-import { Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Alert, Modal, ToastAndroid, Platform } from 'react-native';
 import styled from 'styled-components/native';
-import { colors } from '@/styles/colors';
+import { useTheme } from '@/contexts/ThemeProvider';
 import { playerService } from '@/services/playerService';
 import { Header } from '@/components/Header';
 import { useRouter } from 'expo-router';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
+import { ContactPicker } from '@/components/ContactPicker';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as Contacts from 'expo-contacts';
 
 export default function NewPlayer() {
     const router = useRouter();
+    const { colors } = useTheme();
     const [loading, setLoading] = useState(false);
+    const [showContactPicker, setShowContactPicker] = useState(false);
+    const [avatarUri, setAvatarUri] = useState<string | null>(null);
+    const [hasContactPermission, setHasContactPermission] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         nickname: '',
         phone: ''
     });
+    
+    useEffect(() => {
+        (async () => {
+            const { status } = await Contacts.requestPermissionsAsync();
+            setHasContactPermission(status === 'granted');
+            
+            if (status !== 'granted') {
+                if (Platform.OS === 'android') {
+                    ToastAndroid.show('Permissão para acessar contatos negada', ToastAndroid.SHORT);
+                } else {
+                    Alert.alert('Permissão negada', 'Não foi possível acessar seus contatos.');
+                }
+            }
+        })();
+    }, []);
 
+    const handleSelectContact = (contact: { name: string; phoneNumber: string; imageUri?: string }) => {
+        setFormData(prev => ({
+            ...prev,
+            name: contact.name,
+            phone: contact.phoneNumber
+        }));
+        
+        if (contact.imageUri) {
+            setAvatarUri(contact.imageUri);
+        }
+        
+        setShowContactPicker(false);
+    };
+    
+    const handlePickImage = async () => {
+        try {
+            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            
+            if (permissionResult.granted === false) {
+                Alert.alert('Permissão negada', 'É necessário permitir o acesso à galeria para selecionar uma foto.');
+                return;
+            }
+            
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+            
+            if (!result.canceled) {
+                setAvatarUri(result.assets[0].uri);
+            }
+        } catch (error) {
+            console.error('Erro ao selecionar imagem:', error);
+            Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
+        }
+    };
+    
     const handleSubmit = async () => {
         try {
             setLoading(true);
@@ -31,11 +93,31 @@ export default function NewPlayer() {
                 return;
             }
 
-            await playerService.create({
+            // Criar objeto com os dados do jogador
+            const playerData: {
+                name: string;
+                nickname?: string;
+                phone: string;
+                avatar_url?: string;
+            } = {
                 name: formData.name.trim(),
-                nickname: formData.nickname.trim(),
-                phone: formData.phone.trim()
-            });
+                phone: formData.phone.trim(),
+            };
+            
+            // Adicionar apelido se existir
+            if (formData.nickname.trim()) {
+                playerData.nickname = formData.nickname.trim();
+            }
+            
+            // Adicionar avatar se existir
+            if (avatarUri) {
+                // Aqui você poderia fazer upload da imagem para o storage
+                // e depois adicionar a URL ao playerData
+                // Por enquanto, vamos apenas simular isso
+                // playerData.avatar_url = avatarUri;
+            }
+
+            await playerService.create(playerData);
 
             Alert.alert('Sucesso', 'Jogador criado com sucesso');
             router.back();
@@ -53,35 +135,87 @@ export default function NewPlayer() {
 
             <Content>
                 <Form>
+                    <AvatarContainer>
+                        {avatarUri ? (
+                            <Avatar source={{ uri: avatarUri }} />
+                        ) : (
+                            <AvatarPlaceholder onPress={handlePickImage}>
+                                <Ionicons name="camera" size={40} color={colors.textSecondary} />
+                            </AvatarPlaceholder>
+                        )}
+                        <AvatarLabel>Adicionar foto</AvatarLabel>
+                    </AvatarContainer>
+
                     <TextInput
                         label="Nome"
-                        placeholder="Digite o nome do jogador"
+                        placeholder="Nome do jogador"
                         value={formData.name}
                         onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
                     />
 
                     <TextInput
-                        label="Apelido"
-                        placeholder="Digite o apelido do jogador"
-                        value={formData.nickname}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, nickname: text }))}
-                    />
-
-                    <TextInput
                         label="Celular"
-                        placeholder="Digite o celular do jogador"
+                        placeholder="(00) 00000-0000"
                         value={formData.phone}
                         onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text }))}
                         keyboardType="phone-pad"
                         maxLength={11}
                     />
+                    
+                    <ContactButton 
+                        onPress={() => {
+                            if (hasContactPermission) {
+                                setShowContactPicker(true);
+                            } else {
+                                Alert.alert(
+                                    'Permissão necessária', 
+                                    'Para selecionar contatos, você precisa permitir o acesso aos seus contatos.',
+                                    [
+                                        { text: 'Cancelar', style: 'cancel' },
+                                        { 
+                                            text: 'Permitir', 
+                                            onPress: async () => {
+                                                const { status } = await Contacts.requestPermissionsAsync();
+                                                setHasContactPermission(status === 'granted');
+                                                if (status === 'granted') {
+                                                    setShowContactPicker(true);
+                                                }
+                                            } 
+                                        }
+                                    ]
+                                );
+                            }
+                        }}
+                    >
+                        <ContactButtonIcon>
+                            <Ionicons name="people" size={24} color={colors.white} />
+                        </ContactButtonIcon>
+                        <ContactButtonText>Adicionar da Agenda</ContactButtonText>
+                    </ContactButton>
 
                     <Button
                         title="Criar Jogador"
                         onPress={handleSubmit}
                         loading={loading}
+                        style={{ marginTop: 16 }}
                     />
                 </Form>
+                
+                <Modal
+                    visible={showContactPicker}
+                    animationType="slide"
+                    transparent={true}
+                    onRequestClose={() => setShowContactPicker(false)}
+                >
+                    <ModalContainer>
+                        <ModalContent>
+                            <ContactPicker 
+                                onSelectContact={handleSelectContact}
+                                onClose={() => setShowContactPicker(false)}
+                            />
+                        </ModalContent>
+                    </ModalContainer>
+                </Modal>
             </Content>
         </Container>
     );
@@ -89,7 +223,7 @@ export default function NewPlayer() {
 
 const Container = styled.View`
     flex: 1;
-    background-color: ${colors.backgroundDark};
+    background-color: ${({ theme }) => theme.colors.backgroundDark};
 `;
 
 const Content = styled.ScrollView`
@@ -99,4 +233,71 @@ const Content = styled.ScrollView`
 
 const Form = styled.View`
     gap: 16px;
+`;
+
+const AvatarLabel = styled.Text`
+    color: ${({ theme }) => theme.colors.textSecondary};
+    font-size: 14px;
+    margin-top: 8px;
+`;
+
+const ContactButton = styled.TouchableOpacity`
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: ${({ theme }) => theme.colors.accent};
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+`;
+
+const ContactButtonIcon = styled.View`
+    margin-right: 10px;
+`;
+
+const ContactButtonText = styled.Text`
+    color: ${({ theme }) => theme.colors.textPrimary};
+    font-size: 16px;
+    font-weight: 500;
+`;
+
+const ModalContainer = styled.View`
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+`;
+
+const ModalContent = styled.View`
+    width: 100%;
+    height: 80%;
+    background-color: ${({ theme }) => theme.colors.backgroundDark};
+    border-radius: 10px;
+    overflow: hidden;
+`;
+
+const AvatarContainer = styled.View`
+    align-items: center;
+    margin-bottom: 16px;
+`;
+
+const Avatar = styled.Image`
+    width: 100px;
+    height: 100px;
+    border-radius: 50px;
+    border-width: 2px;
+    border-color: ${({ theme }) => theme.colors.primary};
+`;
+
+const AvatarPlaceholder = styled.TouchableOpacity`
+    width: 100px;
+    height: 100px;
+    border-radius: 50px;
+    border-width: 2px;
+    border-color: ${({ theme }) => theme.colors.border};
+    background-color: ${({ theme }) => theme.colors.backgroundLight};
+    justify-content: center;
+    align-items: center;
 `;

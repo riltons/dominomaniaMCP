@@ -30,6 +30,8 @@ export interface PlayerStats {
 interface CreatePlayerDTO {
     name: string;
     phone: string;
+    nickname?: string;
+    avatar_url?: string;
 }
 
 class PlayerService {

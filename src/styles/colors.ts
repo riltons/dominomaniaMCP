@@ -1,4 +1,8 @@
 export const colors = {
+    // Cores básicas
+    white: '#FFFFFF',
+    black: '#000000',
+    gray: '#7C7C8A',
     // Cores principais
     primary: '#8257E5',
     secondary: '#1F1E25',
