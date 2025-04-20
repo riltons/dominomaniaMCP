@@ -125,9 +125,22 @@ export const gamesService = {
                 throw new Error('Erro ao buscar jogadores');
             }
 
+            // Buscar todas as comunidades relacionadas de uma vez
+            const uniqueCommunityIds = competitions.map(c => c.community_id);
+            const { data: communities, error: communitiesError } = await supabase
+                .from('communities')
+                .select('id, name')
+                .in('id', uniqueCommunityIds);
+
+            if (communitiesError) {
+                console.error('Erro ao buscar comunidades:', communitiesError);
+                throw new Error('Erro ao buscar comunidades');
+            }
+
             // Mapear os jogos com todos os detalhes
             const gamesWithDetails = games.map(game => {
                 const competition = competitions.find(c => c.id === game.competition.id);
+                const community = communities?.find(c => c.id === competition?.community_id);
                 const gamePlayersList = gamePlayers?.filter(gp => gp.game_id === game.id) || [];
                 const team1Players = gamePlayersList
                     .filter(gp => gp.team === 1)
@@ -148,7 +161,7 @@ export const gamesService = {
                         ...game.competition,
                         community: {
                             id: competition?.community_id || '',
-                            name: competition?.name || ''
+                            name: community?.name || 'Comunidade'
                         }
                     },
                     team1_players: team1Players,
