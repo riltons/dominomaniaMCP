@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, ActivityIndicator, Alert } from 'react-native';
 import styled from 'styled-components/native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { subscriptionService, Plan } from '@/services/subscriptionService';
 import { useTheme } from '@/contexts/ThemeProvider';
@@ -55,10 +55,13 @@ const ButtonText = styled.Text`
 export default function Pricing() {
   const { user } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams<{ hideFree?: string }>();
+  const hideFree = params.hideFree === 'true';
   const { colors } = useTheme();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const visiblePlans = hideFree ? plans.filter(plan => plan.slug !== 'free') : plans;
 
   useEffect(() => {
     subscriptionService
@@ -93,7 +96,7 @@ export default function Pricing() {
 
   return (
     <Container>
-      {plans.map(plan => (
+      {visiblePlans.map(plan => (
         <PlanCard key={plan.id}>
           <Title>{plan.name}</Title>
           <PriceText>

@@ -312,9 +312,13 @@ class CommunityService {
             }
 
             return community;
-        } catch (error) {
+        } catch (error: any) {
+            // Propaga erro de limite free para UI tratar
+            if (error?.message?.includes('Plano gratuito permite criar apenas 1 comunidade')) {
+                throw error;
+            }
             console.error('Erro ao criar comunidade:', error);
-            throw error;
+            return { data: null, error };
         }
     }
 

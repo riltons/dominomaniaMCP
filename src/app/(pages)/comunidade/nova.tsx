@@ -39,6 +39,17 @@ export default function NovaComunidade() {
             // Redireciona para a página de comunidades
             router.replace('/(tabs)/comunidades');
         } catch (error: any) {
+            if (error?.message?.includes('Plano gratuito permite criar apenas 1 comunidade')) {
+                Alert.alert(
+                    'Limite de Comunidades',
+                    'Plano gratuito permite criar apenas 1 comunidade. Faça upgrade para criar mais.',
+                    [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Ver Planos', onPress: () => router.push('/pricing?hideFree=true') }
+                    ]
+                );
+                return;
+            }
             console.error('Erro ao criar comunidade:', error);
             Alert.alert(
                 'Erro',

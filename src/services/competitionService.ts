@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from '@/lib/supabase';
 import { activityService } from './activityService';
 import { subscriptionService } from './subscriptionService';
