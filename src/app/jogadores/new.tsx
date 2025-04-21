@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Modal, ToastAndroid, Platform } from 'react-native';
+import { Alert, Modal, ToastAndroid, Platform, TouchableOpacity, Text } from 'react-native';
 import styled from 'styled-components/native';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { playerService } from '@/services/playerService';
+import { communityService, Community } from '@/services/communityService';
+import { communityMembersService } from '@/services/communityMembersService';
 import { Header } from '@/components/Header';
 import { useRouter } from 'expo-router';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
 import { ContactPicker } from '@/components/ContactPicker';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Contacts from 'expo-contacts';
 
@@ -24,6 +26,8 @@ export default function NewPlayer() {
         nickname: '',
         phone: ''
     });
+    const [communities, setCommunities] = useState<Community[]>([]);
+    const [selectedCommunities, setSelectedCommunities] = useState<string[]>([]);
     
     useEffect(() => {
         (async () => {
@@ -36,6 +40,18 @@ export default function NewPlayer() {
                 } else {
                     Alert.alert('Permissão negada', 'Não foi possível acessar seus contatos.');
                 }
+            }
+        })();
+    }, []);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const { created, organized } = await communityService.list(false);
+                setCommunities([...created, ...organized]);
+            } catch (error) {
+                console.error('Erro ao carregar comunidades:', error);
+                Alert.alert('Erro', 'Não foi possível carregar as comunidades');
             }
         })();
     }, []);
@@ -117,7 +133,12 @@ export default function NewPlayer() {
                 // playerData.avatar_url = avatarUri;
             }
 
-            await playerService.create(playerData);
+            const newPlayer = await playerService.create(playerData);
+            if (selectedCommunities.length > 0) {
+                for (const communityId of selectedCommunities) {
+                    await communityMembersService.addMember(communityId, newPlayer.id);
+                }
+            }
 
             Alert.alert('Sucesso', 'Jogador criado com sucesso');
             router.back();
@@ -193,6 +214,27 @@ export default function NewPlayer() {
                         <ContactButtonText>Adicionar da Agenda</ContactButtonText>
                     </ContactButton>
 
+                    <Text style={{ color: colors.text, fontSize: 16, fontWeight: 'bold', marginTop: 16, marginBottom: 8 }}>
+                        Comunidades
+                    </Text>
+                    {communities.map(c => (
+                        <TouchableOpacity
+                            key={c.id}
+                            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}
+                            onPress={() => setSelectedCommunities(prev =>
+                                prev.includes(c.id)
+                                    ? prev.filter(id => id !== c.id)
+                                    : [...prev, c.id]
+                            )}
+                        >
+                            <Feather
+                                name={selectedCommunities.includes(c.id) ? 'check-square' : 'square'}
+                                size={20}
+                                color={colors.text}
+                            />
+                            <Text style={{ marginLeft: 8, color: colors.text }}>{c.name}</Text>
+                        </TouchableOpacity>
+                    ))}
                     <Button
                         title="Criar Jogador"
                         onPress={handleSubmit}
@@ -226,9 +268,13 @@ const Container = styled.View`
     background-color: ${({ theme }) => theme.colors.backgroundDark};
 `;
 
-const Content = styled.ScrollView`
+const Content = styled.ScrollView.attrs({
+    contentContainerStyle: {
+        padding: 20,
+        paddingBottom: 80,
+    },
+})`
     flex: 1;
-    padding: 20px;
 `;
 
 const Form = styled.View`
