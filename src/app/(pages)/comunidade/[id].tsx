@@ -53,6 +53,7 @@ type Competition = {
     name: string;
     description: string;
     start_date: string;
+    created_at: string;
 };
 
 const Container = styled.View`
@@ -338,7 +339,7 @@ const PlayersList = styled.FlatList`
     width: 100%;
 `;
 
-const CompetitionCard = styled.TouchableOpacity`
+const CompetitionCard = styled.TouchableOpacity<{ colors: any }>`
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -346,6 +347,7 @@ const CompetitionCard = styled.TouchableOpacity`
     background-color: ${props => props.colors.gray800};
     border-radius: 8px;
     margin-bottom: 8px;
+    border: 1px solid ${props => props.colors.gray600};
 `;
 
 const CompetitionInfo = styled.View`
@@ -602,7 +604,11 @@ export default function CommunityDetails() {
             console.log('Buscando competições...');
             const competitionsData = await competitionService.listByCommunity(id);
             console.log('Competições encontradas:', competitionsData);
-            setCompetitions(competitionsData);
+            // Ordena da mais nova para a mais antiga pelo created_at
+            const sortedCompetitions = competitionsData.sort((a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+            setCompetitions(sortedCompetitions);
             setPlayers([...myPlayers, ...communityPlayers]);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
@@ -999,6 +1005,7 @@ export default function CommunityDetails() {
                                             </CompetitionDate>
                                         </CompetitionDetails>
                                     </CompetitionInfo>
+                                    <Feather name="chevron-right" size={16} color={colors.text} />
                                 </CompetitionCard>
                             ))
                         ) : (
