@@ -10,6 +10,7 @@ import { usePathname } from 'expo-router';
 import ErrorBoundary from '../utils/errorBoundary';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import * as NavigationBar from 'expo-navigation-bar';
 
 registerTranslation('en-GB', enGB);
 
@@ -20,6 +21,12 @@ function AppLayout() {
     const isAuthScreen = pathname === '/login' || pathname === '/register' || pathname === '/signup';
     const { theme, colors } = useTheme();
     const isDarkTheme = theme === 'dark';
+
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            NavigationBar.setBackgroundColorAsync(colors.primary);
+        }
+    }, [colors]);
 
     return (
         <SafeContainer statusBarHeight={statusBarHeight}>

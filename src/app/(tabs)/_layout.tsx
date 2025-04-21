@@ -16,9 +16,9 @@ export default function TabRoutesLayout() {
     useEffect(() => {
         async function configureNavigationBar() {
             if (Platform.OS === 'android') {
-                await NavigationBar.setBackgroundColorAsync(colors.backgroundDark);
+                await NavigationBar.setBackgroundColorAsync(colors.primary);
                 await NavigationBar.setButtonStyleAsync('light');
-                await NavigationBar.setBorderColorAsync(colors.backgroundDark);
+                await NavigationBar.setBorderColorAsync(colors.primary);
             }
         }
 
