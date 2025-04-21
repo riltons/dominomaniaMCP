@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
 import { ContactPicker } from '@/components/ContactPicker';
+import { BottomNavigation } from '@/components/BottomNavigation';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Contacts from 'expo-contacts';
@@ -259,6 +260,9 @@ export default function NewPlayer() {
                     </ModalContainer>
                 </Modal>
             </Content>
+            <NavigationContainer>
+                <BottomNavigation />
+            </NavigationContainer>
         </Container>
     );
 }
@@ -346,4 +350,15 @@ const AvatarPlaceholder = styled.TouchableOpacity`
     background-color: ${({ theme }) => theme.colors.backgroundLight};
     justify-content: center;
     align-items: center;
+`;
+
+const NavigationContainer = styled.View`
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: ${({ theme }) => theme.colors.backgroundMedium};
+    border-top-width: 1px;
+    border-top-color: ${({ theme }) => theme.colors.border};
+    height: 60px;
 `;
