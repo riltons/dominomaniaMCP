@@ -265,64 +265,115 @@ export default function RegisterResult() {
                 <SectionTitle colors={colors}>Tipo de Vitória</SectionTitle>
 
                 <VictoryOptionsGrid>
-                    {victoryOptions.map(option => (
-                        <VictoryOptionWrapper key={option.type}>
-                            <VictoryOption
-                                onPress={() => {
-                                    setSelectedType(option.type);
-                                    if (option.type === 'empate') {
-                                        setWinnerTeam(null);
-                                    }
-                                }}
-                                selected={selectedType === option.type}
-                                colors={colors}
-                            >
-                                <VictoryOptionContent>
-                                    <VictoryTitle colors={colors}>{option.label}</VictoryTitle>
-                                    <VictoryDescription colors={colors}>{option.description}</VictoryDescription>
-                                </VictoryOptionContent>
-                                {selectedType === option.type && (
-                                    <Feather name="check" size={24} color={colors.buttonText} />
-                                )}
-                            </VictoryOption>
-                        </VictoryOptionWrapper>
-                    ))}
+                    {victoryOptions.map(option => {
+                        // Determinar se este card está selecionado
+                        const isSelected = selectedType === option.type;
+                        return (
+                            <VictoryOptionWrapper key={option.type}>
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                        // Limpar seleção anterior se clicar no mesmo card
+                                        if (selectedType === option.type) {
+                                            setSelectedType(null);
+                                        } else {
+                                            // Selecionar novo tipo
+                                            setSelectedType(option.type);
+                                            if (option.type === 'empate') {
+                                                setWinnerTeam(null);
+                                            }
+                                        }
+                                    }}
+                                    style={{
+                                        backgroundColor: isSelected ? colors.primary : colors.card,
+                                        borderRadius: 8,
+                                        padding: 16,
+                                        marginBottom: 8,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        borderWidth: 1,
+                                        borderColor: isSelected ? '#fff' : colors.border
+                                    }}
+                                >
+                                    <View style={{ flex: 1, marginRight: 16 }}>
+                                        <Text style={{
+                                            color: colors.text,
+                                            fontSize: 16,
+                                            fontWeight: 'bold'
+                                        }}>{option.label}</Text>
+                                        <Text style={{
+                                            color: colors.textSecondary,
+                                            fontSize: 14,
+                                            marginTop: 4
+                                        }}>{option.description}</Text>
+                                    </View>
+                                    {isSelected && (
+                                        <Feather name="check" size={24} color="#fff" />
+                                    )}
+                                </TouchableOpacity>
+                            </VictoryOptionWrapper>
+                        );
+                    })}
                 </VictoryOptionsGrid>
 
                 {selectedType && selectedType !== 'empate' && (
                     <>
                         <SectionTitle colors={colors}>Time Vencedor</SectionTitle>
-                        <TeamOptions>
-                            <TeamOption
-                                selected={winnerTeam === 'team1'}
-                                onPress={() => setWinnerTeam('team1')}
-                                colors={colors}
-                            >
-                                <TeamOptionContent>
-                                    {team1Players.map((player, index) => (
-                                        <TeamOptionText key={player.id} colors={colors}>
-                                            {player.name}
-                                            {index < team1Players.length - 1 ? ' e ' : ''}
-                                        </TeamOptionText>
-                                    ))}
-                                </TeamOptionContent>
-                            </TeamOption>
-
-                            <TeamOption
-                                selected={winnerTeam === 'team2'}
-                                onPress={() => setWinnerTeam('team2')}
-                                colors={colors}
-                            >
-                                <TeamOptionContent>
-                                    {team2Players.map((player, index) => (
-                                        <TeamOptionText key={player.id} colors={colors}>
-                                            {player.name}
-                                            {index < team2Players.length - 1 ? ' e ' : ''}
-                                        </TeamOptionText>
-                                    ))}
-                                </TeamOptionContent>
-                            </TeamOption>
-                        </TeamOptions>
+                        <View style={{ flexDirection: 'row', margin: -4 }}>
+                            {[{id: 'team1', players: team1Players}, {id: 'team2', players: team2Players}].map((team) => {
+                                const isSelected = winnerTeam === team.id;
+                                return (
+                                    <TouchableOpacity
+                                        key={team.id}
+                                        activeOpacity={0.7}
+                                        onPress={() => {
+                                            // Limpar seleção se clicar no mesmo time
+                                            if (winnerTeam === team.id) {
+                                                setWinnerTeam(null);
+                                            } else {
+                                                setWinnerTeam(team.id as 'team1' | 'team2');
+                                            }
+                                        }}
+                                        style={{
+                                            flex: 1,
+                                            backgroundColor: isSelected ? colors.primary : colors.card,
+                                            borderRadius: 8,
+                                            padding: 16,
+                                            margin: 4,
+                                            alignItems: 'center',
+                                            borderWidth: 1,
+                                            borderColor: isSelected ? '#fff' : colors.border,
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                            {team.players.map((player, index) => (
+                                                <Text 
+                                                    key={player.id} 
+                                                    style={{
+                                                        color: colors.text,
+                                                        fontSize: 16,
+                                                        textAlign: 'center'
+                                                    }}
+                                                >
+                                                    {player.name}
+                                                    {index < team.players.length - 1 ? ' e ' : ''}
+                                                </Text>
+                                            ))}
+                                        </View>
+                                        {isSelected && (
+                                            <Feather 
+                                                name="check" 
+                                                size={24} 
+                                                color="#fff" 
+                                                style={{position: 'absolute', right: 16, top: 16}} 
+                                            />
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
                     </>
                 )}
 
@@ -449,6 +500,7 @@ const TeamOption = styled.TouchableOpacity<{ selected: boolean, colors: any }>`
     margin: 4px;
     align-items: center;
     border: 1px solid ${props => props.selected ? '#fff' : props.colors.border};
+    position: relative;
 `;
 
 const TeamOptionContent = styled.View`
