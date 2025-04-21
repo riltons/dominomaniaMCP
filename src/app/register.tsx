@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Alert, ActivityIndicator, StatusBar, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import styled from 'styled-components/native';
 import { useAuth } from '../hooks/useAuth';
 import { userService } from '../services/userService';
 import { useTheme } from '../contexts/ThemeProvider';
 import { supabase } from '@/lib/supabase';
+import { subscriptionService } from '../services/subscriptionService';
 
 export default function Register() {
     const router = useRouter();
+    const { plan } = useLocalSearchParams<{ plan?: string }>();
     const { signUp, signIn } = useAuth();
     const [loading, setLoading] = useState(false);
     const { colors } = useTheme();
@@ -68,6 +70,10 @@ export default function Register() {
                 throw new Error(signInError);
             }
 
+            // Se veio do plano gratuito, atribuir plano free
+            if (plan === 'free') {
+                await subscriptionService.assignFreePlan(data.user.id);
+            }
             // Após login automático, exibe onboarding em vez do dashboard
             router.replace('/onboarding');
 

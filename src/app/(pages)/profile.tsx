@@ -52,6 +52,15 @@ const SaveButton = styled.TouchableOpacity`
   opacity: ${props => props.disabled ? 0.7 : 1};
 `;
 
+const SubscriptionButton = styled.TouchableOpacity`
+  background-color: ${({ theme }) => theme.colors.primary};
+  padding: 16px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+`;
+
 const ButtonText = styled.Text`
   color: ${({ theme }) => theme.colors.white};
   font-size: 16px;
@@ -443,6 +452,9 @@ export default function ProfileScreen() {
                 {loading ? 'Salvando...' : 'Salvar Alterações'}
               </ButtonText>
             </SaveButton>
+            <SubscriptionButton onPress={() => router.push('/subscription')}>
+              <ButtonText>Gerenciar Assinatura</ButtonText>
+            </SubscriptionButton>
           </Content>
         </ScrollContent>
       </Container>

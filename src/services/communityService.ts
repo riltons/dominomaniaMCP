@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { activityService } from './activityService';
+import { subscriptionService } from './subscriptionService';
 
 export interface Community {
     id: string;
@@ -168,6 +169,17 @@ class CommunityService {
             const { data: userData, error: userError } = await supabase.auth.getUser();
             if (userError) throw userError;
 
+            // Limitar criação de comunidades: free plan só 1
+            const subscription = await subscriptionService.getUserSubscription(userData.user.id);
+            if (subscription?.plans.slug === 'free') {
+                const { count, error: countError } = await supabase
+                    .from('communities')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('created_by', userData.user.id);
+                if (countError) throw countError;
+                if ((count || 0) >= 1) throw new Error('Plano gratuito permite criar apenas 1 comunidade');
+            }
+
             const now = new Date().toISOString();
             const { data, error } = await supabase
                 .from('communities')
@@ -199,6 +211,17 @@ class CommunityService {
         try {
             const userId = (await supabase.auth.getUser()).data.user?.id;
             if (!userId) throw new Error('Usuário não autenticado');
+
+            // Limitar criação de comunidades: free plan só 1
+            const subscription = await subscriptionService.getUserSubscription(userId);
+            if (subscription?.plans.slug === 'free') {
+                const { count, error: countError } = await supabase
+                    .from('communities')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('created_by', userId);
+                if (countError) throw countError;
+                if ((count || 0) >= 1) throw new Error('Plano gratuito permite criar apenas 1 comunidade');
+            }
 
             const { data: community, error } = await supabase
                 .from('communities')

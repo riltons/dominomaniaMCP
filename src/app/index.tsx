@@ -72,10 +72,9 @@ export default function LandingPage() {
             suas competições de dominó. É grátis!
           </Text>
           
-          <Link href="/register" asChild>
-            <Pressable style={styles.ctaButton}>
-              <Text style={styles.ctaButtonText}>Criar Conta</Text>
-              <Ionicons name="arrow-forward" size={24} color="white" />
+          <Link href="/pricing" asChild>
+            <Pressable style={styles.pricingButton}>
+              <Text style={styles.pricingButtonText}>Ver Planos</Text>
             </Pressable>
           </Link>
 
@@ -177,16 +176,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginVertical: 20,
   },
-  ctaButton: {
-    backgroundColor: '#00875F',
-    paddingHorizontal: 36,
-    paddingVertical: 18,
-    borderRadius: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
   ctaTitle: {
     fontSize: 32,
     fontWeight: 'bold',
@@ -213,6 +202,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   ctaButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  pricingButton: {
+    backgroundColor: '#22c55e',
+    paddingVertical: 18,
+    paddingHorizontal: 36,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  pricingButtonText: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',

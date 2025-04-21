@@ -97,7 +97,7 @@ const TabButton = styled.TouchableOpacity<{ isActive: boolean }>`
     border-radius: 8px;
     background-color: ${({ isActive, theme }) =>
         isActive ? theme.colors.tertiary : 'transparent'};
-    max-width: 24%;
+    max-width: 20%;
 `;
 
 const TabIcon = styled(Feather)``;

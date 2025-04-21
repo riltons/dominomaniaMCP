@@ -131,15 +131,15 @@ export default function Onboarding() {
     if (currentIndex < slides.length - 1) {
       scrollRef.current?.scrollTo({ x: width * (currentIndex + 1), animated: true });
     } else {
-      router.replace('/login');
+      router.replace('/dashboard');
     }
   };
 
-  const skip = () => router.replace('/login');
+  const skip = () => router.replace('/dashboard');
 
   return (
     <Container>
-      <InternalHeader title="Introdução ao Dominomania" onBack={() => router.replace('/login')} />
+      <InternalHeader title="Introdução ao Dominomania" onBack={() => router.replace('/dashboard')} />
       <Animated.ScrollView
         horizontal
         pagingEnabled

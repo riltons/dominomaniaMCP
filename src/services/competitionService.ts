@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { activityService } from './activityService';
+import { subscriptionService } from './subscriptionService';
 
 export interface Competition {
     id: string;
@@ -58,6 +59,18 @@ export const competitionService = {
             const { data: user } = await supabase.auth.getUser();
             if (!user?.user?.id) {
                 throw new Error('Usuário não autenticado');
+            }
+
+            // Limitar competições ativas: free plan só 2 por comunidade
+            const subscription = await subscriptionService.getUserSubscription(user.user.id);
+            if (subscription?.plans.slug === 'free') {
+                const { count, error: countError } = await supabase
+                    .from('competitions')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('community_id', formattedData.community_id)
+                    .in('status', ['pending', 'in_progress']);
+                if (countError) throw countError;
+                if ((count || 0) >= 2) throw new Error('Plano gratuito permite no máximo 2 competições ativas por comunidade');
             }
 
             // Verifica se o usuário tem permissão para criar competição nesta comunidade

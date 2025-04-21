@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { activityService } from './activityService';
+import { subscriptionService } from './subscriptionService';
 
 export type VictoryType = 
     | 'simple' // 1 ponto
@@ -44,6 +45,19 @@ export const gameService = {
             console.log('Criando jogo com dados:', data);
             const session = await supabase.auth.getSession();
             console.log('Sessão atual:', session);
+
+            // Limitar jogos: free plan só 10 por competição
+            const { data: user } = await supabase.auth.getUser();
+            if (!user?.user?.id) throw new Error('Usuário não autenticado');
+            const subscription = await subscriptionService.getUserSubscription(user.user.id);
+            if (subscription?.plans.slug === 'free') {
+                const { count, error: countError } = await supabase
+                    .from('games')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('competition_id', data.competition_id);
+                if (countError) throw countError;
+                if ((count || 0) >= 10) throw new Error('Plano gratuito permite no máximo 10 jogos por competição');
+            }
 
             const { data: newGame, error } = await supabase
                 .from('games')
