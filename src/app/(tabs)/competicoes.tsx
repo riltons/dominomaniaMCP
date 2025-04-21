@@ -1,4 +1,4 @@
-import { View, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Modal } from "react-native"
+import { View, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Modal, Text, Alert } from "react-native"
 import styled from "styled-components/native"
 import { colors } from "@/styles/colors"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
@@ -9,6 +9,9 @@ import { supabase } from "@/lib/supabase"
 import { Competition, competitionService } from "@/services/competitionService"
 import { useRouter } from 'expo-router'
 import { useTheme } from "@/contexts/ThemeProvider"
+import { Feather } from "@expo/vector-icons"
+import { communityService, Community } from "@/services/communityService"
+import { ColorType } from "@/styles/themes"
 
 const Container = styled.View`
   flex: 1;
@@ -136,20 +139,120 @@ const EmptyText = styled.Text`
   text-align: center;
 `;
 
+const FAB = styled.TouchableOpacity`
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background-color: ${({ theme }) => theme.colors.primary};
+  justify-content: center;
+  align-items: center;
+  elevation: 5;
+`;
+
+const ModalOverlay = styled.View`
+  flex: 1;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+`;
+
+const ModalContainer = styled.View`
+  width: 100%;
+  background-color: ${({ theme }) => theme.colors.backgroundDark};
+  border-radius: 8px;
+  padding: 20px;
+  max-height: 80%;
+`;
+
+const ModalHeader = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const ModalTitle = styled.Text`
+  font-size: 18px;
+  font-weight: bold;
+  color: ${({ theme }) => theme.colors.gray100};
+`;
+
+const FormGroup = styled.View`
+  margin-bottom: 16px;
+`;
+
+const Label = styled.Text`
+  font-size: 16px;
+  color: ${({ theme }) => theme.colors.gray100};
+  margin-bottom: 8px;
+`;
+
+const Input = styled.TextInput`
+  background-color: ${({ theme }) => theme.colors.gray800};
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  color: ${({ theme }) => theme.colors.gray100};
+`;
+
+const SaveButton = styled.TouchableOpacity`
+  background-color: ${({ theme }) => theme.colors.primary};
+  padding: 16px;
+  border-radius: 8px;
+  align-items: center;
+  margin-top: 16px;
+`;
+
+const SaveButtonText = styled.Text`
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+`;
+
+const CommunitySelector = styled.ScrollView.attrs({
+  contentContainerStyle: {
+    paddingBottom: 8,
+  },
+})`
+  max-height: 150px;
+  background-color: ${({ theme }) => theme.colors.gray800};
+  border-radius: 8px;
+  padding: 8px;
+`;
+
+const CommunityOption = styled.TouchableOpacity<{ isSelected: boolean }>`
+  flex-direction: row;
+  align-items: center;
+  padding: 10px;
+  background-color: ${({ isSelected, theme }) => isSelected ? theme.colors.gray700 : 'transparent'};
+  border-radius: 4px;
+  margin-bottom: 4px;
+`;
+
+const CommunityName = styled.Text`
+  color: ${({ theme }) => theme.colors.gray100};
+  font-size: 16px;
+  margin-left: 8px;
+`;
+
 const Content = styled.View`
   flex: 1;
 `;
 
-const getStatusColor = (status: string, theme: any) => {
+const getStatusColor = (status: string, colors: ColorType) => {
   switch (status) {
     case 'pending':
-      return theme.colors.warning;
+      return colors.warning
     case 'in_progress':
-      return theme.colors.success;
+      return colors.success
     case 'finished':
-      return theme.colors.primary;
+      return colors.primary
     default:
-      return theme.colors.textSecondary;
+      return colors.textSecondary
   }
 }
 
@@ -177,12 +280,29 @@ export default function Competicoes() {
   }>({ created: [], organized: [] })
   const [competitionStats, setCompetitionStats] = useState<{[key: string]: { totalPlayers: number, totalGames: number }}>({});
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: ''
+  });
   const router = useRouter()
-  const theme = useTheme()
+  const { colors } = useTheme()
 
   useEffect(() => {
     loadCompetitions()
+    loadCommunities()
   }, [])
+  
+  const loadCommunities = async () => {
+    try {
+      const { created, organized } = await communityService.list(false);
+      setCommunities([...created, ...organized]);
+    } catch (error) {
+      console.error('Erro ao carregar comunidades:', error);
+    }
+  }
 
   const loadCompetitions = async () => {
     try {
@@ -237,7 +357,7 @@ export default function Competicoes() {
             <CompetitionDescription>{competition.description}</CompetitionDescription>
           )}
           <CompetitionStatus>
-            <StatusText style={{ color: getStatusColor(competition.status, theme) }}>
+            <StatusText style={{ color: getStatusColor(competition.status, colors) }}>
               {getStatusText(competition.status)}
             </StatusText>
           </CompetitionStatus>
@@ -245,7 +365,7 @@ export default function Competicoes() {
         <MaterialCommunityIcons
           name="chevron-right"
           size={24}
-          color={theme.colors.text}
+          color={colors.textPrimary}
         />
       </CompetitionHeader>
 
@@ -257,16 +377,45 @@ export default function Competicoes() {
 
       <CompetitionStats>
         <StatContainer>
-          <MaterialCommunityIcons name="account-group" size={16} color={theme.colors.gray300} />
+          <MaterialCommunityIcons name="account-group" size={16} color={colors.gray300} />
           <StatText>{competitionStats[competition.id]?.totalPlayers || 0} jogadores</StatText>
         </StatContainer>
         <StatContainer>
-          <MaterialCommunityIcons name="gamepad-variant" size={16} color={theme.colors.gray300} />
+          <MaterialCommunityIcons name="gamepad-variant" size={16} color={colors.gray300} />
           <StatText>{competitionStats[competition.id]?.totalGames || 0} jogos</StatText>
         </StatContainer>
       </CompetitionStats>
     </CompetitionCard>
   );
+
+  const handleCreateCompetition = async () => {
+    if (!selectedCommunity) {
+      Alert.alert('Erro', 'Selecione uma comunidade');
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      Alert.alert('Erro', 'O nome da competição é obrigatório');
+      return;
+    }
+
+    try {
+      await competitionService.create({
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        communityId: selectedCommunity
+      });
+
+      setModalVisible(false);
+      setFormData({ name: '', description: '' });
+      setSelectedCommunity(null);
+      loadCompetitions();
+      Alert.alert('Sucesso', 'Competição criada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao criar competição:', error);
+      Alert.alert('Erro', 'Não foi possível criar a competição');
+    }
+  };
 
   return (
     <Container>
@@ -274,7 +423,7 @@ export default function Competicoes() {
       <Content>
         {loading ? (
           <LoadingContainer>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} />
           </LoadingContainer>
         ) : (
           <ScrollContent>
@@ -293,6 +442,76 @@ export default function Competicoes() {
             )}
           </ScrollContent>
         )}
+
+        <FAB onPress={() => setModalVisible(true)}>
+          <Feather name="plus" size={24} color="#fff" />
+        </FAB>
+
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <ModalOverlay>
+            <ModalContainer>
+              <ModalHeader>
+                <ModalTitle>Nova Competição</ModalTitle>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Feather name="x" size={24} color={colors.gray300} />
+                </TouchableOpacity>
+              </ModalHeader>
+
+              <FormGroup>
+                <Label>Comunidade</Label>
+                <CommunitySelector>
+                  {communities.map(community => (
+                    <CommunityOption 
+                      key={community.id}
+                      onPress={() => setSelectedCommunity(community.id)}
+                      isSelected={selectedCommunity === community.id}
+                    >
+                      <Feather 
+                        name={selectedCommunity === community.id ? "check-circle" : "circle"} 
+                        size={20} 
+                        color={selectedCommunity === community.id ? colors.primary : colors.gray300} 
+                      />
+                      <CommunityName>{community.name}</CommunityName>
+                    </CommunityOption>
+                  ))}
+                </CommunitySelector>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>Nome</Label>
+                <Input
+                  value={formData.name}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+                  placeholder="Nome da competição"
+                  placeholderTextColor={colors.gray300}
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <Label>Descrição</Label>
+                <Input
+                  value={formData.description}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
+                  placeholder="Descrição da competição"
+                  placeholderTextColor={colors.gray300}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  style={{ minHeight: 100 }}
+                />
+              </FormGroup>
+
+              <SaveButton onPress={handleCreateCompetition}>
+                <SaveButtonText>Criar Competição</SaveButtonText>
+              </SaveButton>
+            </ModalContainer>
+          </ModalOverlay>
+        </Modal>
       </Content>
     </Container>
   );
