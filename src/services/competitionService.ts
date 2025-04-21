@@ -15,7 +15,13 @@ export interface CreateCompetitionDTO {
     name: string;
     description: string;
     community_id: string;
-    start_date: string;
+    start_date?: string;
+}
+
+export interface SimpleCreateCompetitionDTO {
+    name: string;
+    description: string;
+    communityId: string;
 }
 
 export interface CompetitionResult {
@@ -39,7 +45,14 @@ export interface CompetitionResult {
 }
 
 export const competitionService = {
-    async create(data: CreateCompetitionDTO) {
+    async create(data: CreateCompetitionDTO | SimpleCreateCompetitionDTO) {
+        // Converter formato simplificado para o formato completo
+        const formattedData: CreateCompetitionDTO = {
+            name: data.name,
+            description: data.description,
+            community_id: 'communityId' in data ? data.communityId : data.community_id,
+            start_date: 'start_date' in data ? data.start_date : new Date().toISOString()
+        };
         try {
             console.log('[competitionService] Criando competição:', data);
             const { data: user } = await supabase.auth.getUser();
@@ -51,7 +64,7 @@ export const competitionService = {
             const { data: community } = await supabase
                 .from('communities')
                 .select('id')
-                .eq('id', data.community_id)
+                .eq('id', formattedData.community_id)
                 .eq('created_by', user.user.id)
                 .maybeSingle();
 
@@ -59,7 +72,7 @@ export const competitionService = {
                 const { data: organizer } = await supabase
                     .from('community_organizers')
                     .select('id')
-                    .eq('community_id', data.community_id)
+                    .eq('community_id', formattedData.community_id)
                     .eq('user_id', user.user.id)
                     .maybeSingle();
 
@@ -72,11 +85,11 @@ export const competitionService = {
             const { data: newCompetition, error } = await supabase.rpc(
                 'create_competition',
                 {
-                    p_name: data.name,
-                    p_description: data.description,
-                    p_community_id: data.community_id,
+                    p_name: formattedData.name,
+                    p_description: formattedData.description,
+                    p_community_id: formattedData.community_id,
                     p_created_by: user.user.id,
-                    p_start_date: data.start_date
+                    p_start_date: formattedData.start_date
                 }
             );
 
@@ -94,7 +107,7 @@ export const competitionService = {
                         console.log(`[competitionService] Tentativa ${attempt} de criar atividade...`);
                         await activityService.createActivity({
                             type: 'competition',
-                            description: `Nova competição "${data.name}" criada!`,
+                            description: `Nova competição "${formattedData.name}" criada!`,
                             metadata: {
                                 competition_id: newCompetition.id
                             }
