@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components/native';
 import { colors } from '@/styles/colors';
 import { Feather } from '@expo/vector-icons';
-import { View, StatusBar } from 'react-native';
+import { View, StatusBar, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 
 type InternalHeaderProps = {
@@ -36,11 +36,20 @@ export function InternalHeader({ title, onBack, rightContent }: InternalHeaderPr
                     </BackButton>
                     <HeaderTitle>{title}</HeaderTitle>
                 </HeaderLeft>
-                {rightContent && (
-                    <HeaderRight>
-                        <RightContentContainer>{rightContent}</RightContentContainer>
-                    </HeaderRight>
-                )}
+                <HeaderRight>
+                    {rightContent && <RightContentContainer>{rightContent}</RightContentContainer>}
+                    <TouchableOpacity 
+                        onPress={() => router.push('/onboarding')}
+                        style={{ 
+                            padding: 8,
+                            marginLeft: 8,
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            borderRadius: 20
+                        }}
+                    >
+                        <Feather name="info" size={24} color={colors.white} />
+                    </TouchableOpacity>
+                </HeaderRight>
             </Container>
         </View>
     );

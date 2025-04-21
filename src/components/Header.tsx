@@ -114,6 +114,9 @@ export function Header({ title, showBackButton, isDashboard }: HeaderProps) {
                         <MaterialCommunityIcons name="account-circle-outline" size={24} color={colors.white} />
                     </IconButton>
                     <ThemeToggle />
+                    <IconButton onPress={() => router.push('/onboarding')}>
+                        <MaterialCommunityIcons name="information-outline" size={24} color={colors.white} />
+                    </IconButton>
                     <IconButton onPress={handleLogout}>
                         <MaterialCommunityIcons name="logout" size={24} color={colors.white} />
                     </IconButton>

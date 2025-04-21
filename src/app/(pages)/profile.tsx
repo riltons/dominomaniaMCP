@@ -115,8 +115,12 @@ export default function ProfileScreen() {
             ]);
           
           if (insertError) {
-            console.error('Erro ao criar perfil:', insertError);
-            throw insertError;
+            if (insertError.code === '23505') {
+              console.warn('Perfil já existe, ignorando erro de duplicação');
+            } else {
+              console.error('Erro ao criar perfil:', insertError);
+              throw insertError;
+            }
           }
 
           setProfile({

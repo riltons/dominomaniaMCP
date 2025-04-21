@@ -18,7 +18,7 @@ function AppLayout() {
     const { session } = useAuth();
     const statusBarHeight = StatusBar.currentHeight || 0;
     const pathname = usePathname();
-    const isAuthScreen = pathname === '/login' || pathname === '/register' || pathname === '/signup';
+    const isAuthScreen = ['/login', '/register', '/signup', '/onboarding'].includes(pathname);
     const { theme, colors } = useTheme();
     const isDarkTheme = theme === 'dark';
 
@@ -49,6 +49,8 @@ function AppLayout() {
                 )
             ) : (
                 <Stack screenOptions={{ headerShown: false }}>
+                    {/* Exibe tela de onboarding antes de login/registro */}
+                    <Stack.Screen name="(pages)/onboarding" />
                     <Stack.Screen name="login" />
                     <Stack.Screen name="register" />
                     <Stack.Screen name="signup" />

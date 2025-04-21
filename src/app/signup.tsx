@@ -110,8 +110,10 @@ export default function SignUp() {
             }
 
             console.log('Perfil criado com sucesso');
-            Alert.alert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
-            router.replace('/login');
+            // Após criação, direciona para as telas de onboarding
+            Alert.alert('Sucesso', 'Conta criada com sucesso! Bem-vindo ao Dominomania!', [
+                { text: 'Começar', onPress: () => router.replace('/onboarding') }
+            ]);
 
         } catch (error: any) {
             console.error('Erro detalhado:', error);

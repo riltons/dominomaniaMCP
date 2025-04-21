@@ -68,8 +68,8 @@ export default function Register() {
                 throw new Error(signInError);
             }
 
-            // Redireciona imediatamente após o login bem-sucedido
-            router.replace('/(tabs)/dashboard');
+            // Após login automático, exibe onboarding em vez do dashboard
+            router.replace('/onboarding');
 
         } catch (error: any) {
             console.error('Erro completo no registro:', error);
