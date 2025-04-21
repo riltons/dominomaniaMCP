@@ -838,6 +838,7 @@ export default function CommunityDetails() {
                             {organizer.user_profile?.name || organizer.user_profile?.email}
                             {organizer.is_creator ? " (Criador)" : ""}
                         </PlayerName>
+                        <OrganizerEmail colors={colors}>{organizer.user_profile?.email}</OrganizerEmail>
                     </PlayerInfo>
                     {!organizer.is_creator && community?.created_by === user?.id && (
                         <TouchableOpacity onPress={() => handleRemoveOrganizer(organizer.user_id)}>

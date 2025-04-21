@@ -142,6 +142,18 @@ export default function CompetitionDetails() {
         }
     };
 
+    const confirmFinishCompetition = () => {
+        Alert.alert(
+            'Encerrar Competição',
+            'Tem certeza que deseja encerrar a competição?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Sim', onPress: () => handleFinishCompetition() },
+            ],
+            { cancelable: true }
+        );
+    };
+
     // Atualiza os dados quando a tela recebe foco (ex: ao voltar de outra tela)
     useFocusEffect(
         useCallback(() => {
@@ -231,7 +243,7 @@ export default function CompetitionDetails() {
                 </SectionHeader>
 
                 {competition?.status === 'in_progress' && canFinish && (
-                    <FinishButton onPress={handleFinishCompetition} disabled={loading} colors={colors}>
+                    <FinishButton onPress={confirmFinishCompetition} disabled={loading} colors={colors}>
                         {loading ? (
                             <ActivityIndicator color={colors.gray100} />
                         ) : (
