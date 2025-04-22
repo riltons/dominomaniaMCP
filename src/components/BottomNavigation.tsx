@@ -83,9 +83,9 @@ export function BottomNavigation() {
 
 const Container = styled.View`
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 8px 4px;
     width: 100%;
     height: 60px;
 `;
@@ -93,11 +93,12 @@ const Container = styled.View`
 const TabButton = styled.TouchableOpacity<{ isActive: boolean }>`
     align-items: center;
     justify-content: center;
-    padding: 6px 10px;
+    padding: 6px 4px;
     border-radius: 8px;
     background-color: ${({ isActive, theme }) =>
         isActive ? theme.colors.tertiary : 'transparent'};
-    max-width: 20%;
+    flex: 1;
+    margin: 0 2px;
 `;
 
 const TabIcon = styled(Feather)``;
@@ -110,4 +111,6 @@ const TabLabel = styled.Text<{ isActive: boolean }>`
     font-weight: ${({ isActive }) => (isActive ? 'bold' : 'normal')};
     text-align: center;
     width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
 `;
