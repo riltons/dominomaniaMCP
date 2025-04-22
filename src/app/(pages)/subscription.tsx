@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { useAuth } from '@/hooks/useAuth';
+import { Header } from '@/components/Header';
 import { subscriptionService, SubscriptionWithPlan } from '@/services/subscriptionService';
 import { useTheme } from '@/contexts/ThemeProvider';
 import { useRouter } from 'expo-router';
@@ -39,7 +40,7 @@ const ButtonText = styled.Text`
 `;
 
 export default function Subscription() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
   const [sub, setSub] = useState<SubscriptionWithPlan | null>(null);
@@ -47,6 +48,7 @@ export default function Subscription() {
   const [canceling, setCanceling] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.replace('/login');
       return;
@@ -56,7 +58,7 @@ export default function Subscription() {
       .then(setSub)
       .catch(() => Alert.alert('Erro', 'Não foi possível carregar assinatura'))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, authLoading]);
 
   const handleCancel = async () => {
     if (!sub) return;
@@ -72,35 +74,49 @@ export default function Subscription() {
     }
   };
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} size="large" />;
+  if (loading) return (
+    <>
+      <Header title="Assinatura" showBackButton />
+      <ActivityIndicator style={{ flex: 1 }} color={colors.primary} size="large" />
+    </>
+  );
 
   if (!sub) {
     return (
-      <Container>
-        <Text style={{ color: colors.textPrimary }}>Você não possui assinatura ativa.</Text>
-        <ActionButton onPress={() => router.replace('/pricing')}>
-          <ButtonText>Ver planos</ButtonText>
-        </ActionButton>
-      </Container>
+      <>
+        <Header title="Assinatura" showBackButton />
+        <Container>
+          <Text style={{ color: colors.textPrimary }}>Você não possui assinatura ativa.</Text>
+          <ActionButton onPress={() => router.replace('/pricing')}>
+            <ButtonText>Ver planos</ButtonText>
+          </ActionButton>
+        </Container>
+      </>
     );
   }
 
   return (
-    <Container>
-      <Title>Assinatura</Title>
-      <InfoText>Plano: {sub.plans.name}</InfoText>
-      <InfoText>Status: {sub.status}</InfoText>
-      <InfoText>
-        Início: {new Date(sub.starts_at).toLocaleDateString('pt-BR')}
-      </InfoText>
-      <InfoText>
-        {sub.ends_at
-          ? `Termina: ${new Date(sub.ends_at).toLocaleDateString('pt-BR')}`
-          : 'Sem data de término'}
-      </InfoText>
-      <ActionButton disabled={canceling} onPress={handleCancel}>
-        <ButtonText>{canceling ? 'Cancelando...' : 'Cancelar assinatura'}</ButtonText>
-      </ActionButton>
-    </Container>
+    <>
+      <Header title="Assinatura" showBackButton />
+      <Container>
+        <Title>Assinatura</Title>
+        <InfoText>Plano: {sub.plans.name}</InfoText>
+        <InfoText>Status: {sub.status}</InfoText>
+        <InfoText>
+          Início: {new Date(sub.starts_at).toLocaleDateString('pt-BR')}
+        </InfoText>
+        <InfoText>
+          {sub.ends_at
+            ? `Termina: ${new Date(sub.ends_at).toLocaleDateString('pt-BR')}`
+            : 'Sem data de término'}
+        </InfoText>
+        <ActionButton disabled={canceling} onPress={handleCancel}>
+          <ButtonText>{canceling ? 'Cancelando...' : 'Cancelar assinatura'}</ButtonText>
+        </ActionButton>
+        <ActionButton onPress={() => router.push('/pricing?hideFree=true')}>
+          <ButtonText>Upgrade de conta</ButtonText>
+        </ActionButton>
+      </Container>
+    </>
   );
 }
