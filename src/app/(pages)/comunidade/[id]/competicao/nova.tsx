@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { Alert, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import { Alert, TouchableOpacity, ActivityIndicator as ActivityIndicatorRN, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import styled from 'styled-components/native';
 import { useTheme } from '@/contexts/ThemeProvider';
-import { Feather } from '@expo/vector-icons';
+import { Feather as Icon } from '@expo/vector-icons';
 import { competitionService } from '@/services/competitionService';
-import { DatePickerInput } from 'react-native-paper-dates';
-import { PaperProvider, TextInput as Input } from 'react-native-paper';
-import { InternalHeader } from '@/components/InternalHeader';
+import { DatePickerInput as DatePickerInputRN } from 'react-native-paper-dates';
+import { PaperProvider, TextInput as TextInputRN } from 'react-native-paper';
+import { View, Text } from 'react-native';
 
-export default function NovaCompeticao() {
+interface NovaCompeticaoProps {
+    communityId: string;
+}
+
+export default function NovaCompeticao(props: NovaCompeticaoProps) {
     const router = useRouter();
     const { id: communityId } = useLocalSearchParams();
     const { colors, theme: appTheme } = useTheme();
@@ -39,23 +43,38 @@ export default function NovaCompeticao() {
             return;
         }
 
+        setLoading(true);
         try {
-            setLoading(true);
-            await competitionService.create({
+            const result = await competitionService.create({
                 name: formData.name.trim(),
                 description: formData.description.trim(),
                 community_id: communityId as string,
                 start_date: formData.start_date.toISOString()
             });
             
-            await competitionService.refreshCompetitions(communityId as string);
-            router.back();
+            console.log('[DEBUG] Resultado da criação de competição:', JSON.stringify(result));
+            
+            // Verificar se há erro de limite de plano
+            if (result && result.error && result.planLimit) {
+                Alert.alert(
+                    'Limite de Competições',
+                    'Plano gratuito permite no máximo 2 competições ativas por comunidade. Faça upgrade para criar mais.',
+                    [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Ver Planos', onPress: () => router.push('/pricing?hideFree=true') }
+                    ]
+                );
+                return;
+            }
+            
+            // Se não houver erro, continuar
+            if (result && result.success) {
+                await competitionService.refreshCompetitions(communityId as string);
+                router.back();
+            }
         } catch (error: any) {
-            console.error('Erro ao criar competição:', error);
-            Alert.alert(
-                'Erro',
-                error?.message || 'Erro ao criar competição. Tente novamente.'
-            );
+            // Tratamento para outros erros
+            Alert.alert('Erro', error?.message || 'Erro ao criar competição. Tente novamente.');
         } finally {
             setLoading(false);
         }
@@ -131,35 +150,72 @@ export default function NovaCompeticao() {
     );
 }
 
-const Container = styled.View`
+interface ContainerProps {
+    colors: {
+        backgroundDark: string;
+    };
+}
+
+const Container = styled.View<ContainerProps>`
     flex: 1;
     background-color: ${props => props.colors.backgroundDark};
 `;
 
-const Content = styled.ScrollView`
+interface ContentProps {
+    
+}
+
+const Content = styled.ScrollView<ContentProps>`
     flex: 1;
     padding: 16px;
 `;
 
-const FormGroup = styled.View`
+interface FormGroupProps {
+    
+}
+
+const FormGroup = styled.View<FormGroupProps>`
     margin-bottom: 16px;
 `;
 
-const Label = styled.Text`
+interface LabelProps {
+    colors: {
+        textPrimary: string;
+    };
+}
+
+const Label = styled.Text<LabelProps>`
     font-size: 16px;
     margin-bottom: 8px;
     color: ${props => props.colors.textPrimary};
 `;
 
-const DatePickerContainer = styled.View`
+interface DatePickerContainerProps {
+    
+}
+
+const DatePickerContainer = styled.View<DatePickerContainerProps>`
     margin-bottom: 20px;
 `;
 
-const ButtonContainer = styled.View`
+interface ButtonContainerProps {
+    
+}
+
+const ButtonContainer = styled.View<ButtonContainerProps>`
     margin-top: 20px;
 `;
 
-const SaveButton = styled.TouchableOpacity<{ disabled?: boolean, colors: any }>`
+interface SaveButtonProps {
+    disabled?: boolean;
+    colors: {
+        primary: string;
+        gray500: string;
+        white: string;
+    };
+}
+
+const SaveButton = styled.TouchableOpacity<SaveButtonProps>`
     background-color: ${props => props.disabled ? props.colors.gray500 : props.colors.primary};
     padding: 16px;
     border-radius: 8px;
@@ -169,9 +225,104 @@ const SaveButton = styled.TouchableOpacity<{ disabled?: boolean, colors: any }>`
     justify-content: center;
 `;
 
-const ButtonText = styled.Text`
+interface ButtonTextProps {
+    colors: {
+        white: string;
+    };
+}
+
+const ButtonText = styled.Text<ButtonTextProps>`
     color: ${props => props.colors.white};
     font-size: 16px;
     font-weight: bold;
     margin-left: 8px;
 `;
+
+interface InternalHeaderProps {
+    title: string;
+}
+
+const InternalHeader = (props: InternalHeaderProps) => (
+    <View><Text>{props.title}</Text></View>
+);
+
+interface InputProps {
+    mode: 'flat' | 'outlined';
+    placeholder: string;
+    value: string;
+    onChangeText: (text: string) => void;
+    style: any;
+    multiline?: boolean;
+    numberOfLines?: number;
+}
+
+const Input = (props: InputProps) => (
+    <TextInputRN {...props} />
+);
+
+interface DatePickerInputProps {
+    locale: string;
+    label: string;
+    value: Date;
+    onChange: (date: Date | undefined) => void;
+    inputMode: 'start' | 'end';
+    mode: 'flat' | 'outlined';
+    style: any;
+}
+
+const DatePickerInput = (props: DatePickerInputProps) => (
+    <DatePickerInputRN {...props} />
+);
+
+interface ActivityIndicatorProps {
+    color: string;
+    size: number | 'small' | 'large';
+}
+
+const ActivityIndicator = (props: ActivityIndicatorProps) => (
+    <ActivityIndicatorRN {...props} />
+);
+
+interface FeatherProps {
+    name: 'lock' | 'search' | 'repeat' | 'anchor' | 'save';
+    size: number;
+    color: string;
+}
+
+const Feather = (props: FeatherProps) => (
+    <Icon {...props} />
+);
+
+interface Componente145Props {
+    communityId: string;
+}
+
+const Componente145 = (props: Componente145Props) => <View />;
+
+interface Componente160Props {
+    propriedade1: string;
+    propriedade2: number;
+}
+
+const Componente160 = (props: Componente160Props) => <View />;
+
+interface Componente172Props {
+    propriedade1: string;
+    propriedade2: number;
+}
+
+const Componente172 = (props: Componente172Props) => <View />;
+
+interface Componente176Props {
+    propriedade1: string;
+    propriedade2: number;
+}
+
+const Componente176 = (props: Componente176Props) => <View />;
+
+interface Componente182Props {
+    propriedade1: string;
+    propriedade2: number;
+}
+
+const Componente182 = (props: Componente182Props) => <View />;

@@ -400,17 +400,35 @@ export default function Competicoes() {
     }
 
     try {
-      await competitionService.create({
+      const result = await competitionService.create({
         name: formData.name.trim(),
         description: formData.description.trim(),
         communityId: selectedCommunity
       });
-
-      setModalVisible(false);
-      setFormData({ name: '', description: '' });
-      setSelectedCommunity(null);
-      loadCompetitions();
-      Alert.alert('Sucesso', 'Competição criada com sucesso!');
+      
+      console.log('[DEBUG] Resultado da criação de competição (competicoes.tsx):', JSON.stringify(result));
+      
+      // Verificar se há erro de limite de plano
+      if (result && result.error && result.planLimit) {
+        Alert.alert(
+          'Limite de Competições',
+          'Plano gratuito permite no máximo 2 competições ativas por comunidade. Faça upgrade para criar mais.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Ver Planos', onPress: () => router.push('/pricing?hideFree=true') }
+          ]
+        );
+        return;
+      }
+      
+      // Se não houver erro, continuar
+      if (result && result.success) {
+        setModalVisible(false);
+        setFormData({ name: '', description: '' });
+        setSelectedCommunity(null);
+        loadCompetitions();
+        Alert.alert('Sucesso', 'Competição criada com sucesso!');
+      }
     } catch (error) {
       console.error('Erro ao criar competição:', error);
       Alert.alert('Erro', 'Não foi possível criar a competição');

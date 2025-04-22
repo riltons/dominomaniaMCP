@@ -16,9 +16,47 @@ export default function NovaCompeticao() {
         startDate: new Date(),
         endDate: new Date(),
     });
+    const [loading, setLoading] = useState(false);
 
     const handleSave = async () => {
-        // TODO: Implementar criação de competição
+        if (!formData.name.trim()) {
+            Alert.alert('Erro', 'O nome da competição é obrigatório');
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            const result = await competitionService.create({
+                name: formData.name.trim(),
+                description: formData.description.trim(),
+                communityId: params.id as string,
+            });
+            
+            console.log('[DEBUG] Resultado da criação de competição (nova-competicao):', JSON.stringify(result));
+            
+            // Verificar se há erro de limite de plano
+            if (result && result.error && result.planLimit) {
+                Alert.alert(
+                    'Limite de Competições',
+                    'Plano gratuito permite no máximo 2 competições ativas por comunidade. Faça upgrade para criar mais.',
+                    [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Ver Planos', onPress: () => router.push('/pricing?hideFree=true') }
+                    ],
+                );
+                return;
+            }
+            
+            // Se não houver erro, continuar
+            if (result && result.success) {
+                router.replace(`/comunidade/${params.id}`);
+            }
+        } catch (error: any) {
+            // Tratamento para outros erros
+            Alert.alert('Erro', error?.message || 'Erro ao criar competição. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -49,8 +87,12 @@ export default function NovaCompeticao() {
                         />
                     </FormGroup>
 
-                    <SaveButton onPress={handleSave}>
-                        <SaveButtonText>Criar Competição</SaveButtonText>
+                    <SaveButton disabled={loading} onPress={handleSave}>
+                        {loading ? (
+                            <ActivityIndicator color={colors.gray100} />
+                        ) : (
+                            <SaveButtonText>Criar Competição</SaveButtonText>
+                        )}
                     </SaveButton>
                 </Form>
             </Content>

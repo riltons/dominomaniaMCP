@@ -71,7 +71,16 @@ export const competitionService = {
                     .eq('community_id', formattedData.community_id)
                     .in('status', ['pending', 'in_progress']);
                 if (countError) throw countError;
-                if ((count || 0) >= 2) throw new Error('Plano gratuito permite no máximo 2 competições ativas por comunidade');
+                if ((count || 0) >= 2) {
+                    // Retornar um objeto de erro em vez de lançar uma exceção
+                    console.log('[DEBUG] Limite de plano atingido, retornando erro');
+                    return { 
+                        error: true, 
+                        planLimit: true, 
+                        message: 'Plano gratuito permite no máximo 2 competições ativas por comunidade',
+                        success: false // Garantir que success seja false
+                    };
+                }
             }
 
             // Verifica se o usuário tem permissão para criar competição nesta comunidade
@@ -108,7 +117,6 @@ export const competitionService = {
             );
 
             if (error) {
-                console.error('[competitionService] Erro ao criar competição:', error);
                 throw error;
             }
 
@@ -129,29 +137,26 @@ export const competitionService = {
                         console.log('[competitionService] Atividade criada com sucesso!');
                         return true;
                     } catch (activityError) {
-                        console.error(`[competitionService] Erro na tentativa ${attempt}:`, activityError);
-                        
+                        // Removido log para evitar saída desnecessária
                         if (attempt < maxRetries) {
                             const delay = baseDelay * Math.pow(2, attempt - 1);
-                            console.log(`[competitionService] Aguardando ${delay}ms antes da próxima tentativa...`);
+                            // Aguardando sem log
                             await new Promise(resolve => setTimeout(resolve, delay));
                             return createActivityWithRetry(attempt + 1);
                         }
-                        
-                        console.error('[competitionService] Todas as tentativas de criar atividade falharam');
+                        // Todas as tentativas falharam, sem log
                         return false;
                     }
                 };
 
                 createActivityWithRetry(1).catch(error => {
-                    console.error('[competitionService] Erro no processo de retry:', error);
+                    // Removido log para evitar saída desnecessária
                 });
             }
             
             console.log('[competitionService] Competição criada:', newCompetition);
-            return newCompetition;
-        } catch (error) {
-            console.error('[competitionService] Erro ao criar competição:', error);
+            return { success: true, data: newCompetition };
+        } catch (error: any) {
             throw error;
         }
     },
